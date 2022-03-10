@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            font-family:Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+  </head>
+  <body>
+    
+    <script>
+        let randomColors = [];
+        let colorsPerRow = 10;
+        let blockWidth = 0;
+        let colorPicker;
+        
+        function RGBToHSL(r,g,b) {
+            let h = 0;
+            let s = 0;
+            let l = 0;
+
+            //Convert r,g,b from 0,255 to 0,1 range
+            r = r / 255; 
+            g = g / 255; 
+            b = b / 255;
+
+            // Find greatest and smallest channel values
+            let cmin = Math.min( r, g, b );
+            let cmax = Math.max( r, g, b );
+            let delta = cmax - cmin;
+            
+            
+            // Calculate hue
+            if ( delta == 0 ) {
+                h = 0;
+            }
+            else if ( cmax == r ) {
+                h = ((g - b) / delta) % 6;
+            }
+            else if ( cmax == g ) {
+                h = (b - r) / delta + 2;
+            }
+            else {
+                h = (r - g) / delta + 4;
+            }
+
+            h = Math.round(h * 60);
+            if (h < 0) h += 360; 
+            
+            
+            // Calculate lightness
+            l = (cmax + cmin) / 2;
+
+            // Calculate saturation
+            s = delta == 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+                
+            // Set lightness and saturation from 0,1 to 0,100 range
+            s = +(s * 100).toFixed(1);
+            l = +(l * 100).toFixed(1);
+
+            return [h,s,l];
+        }
+        
+        function setup() {
+            createCanvas(600, 600);
+            
+            createDiv("Pick a color : ").position( width + 20, 10).style("color:red"); 
+            colorPicker = createColorPicker('#ed225d').position( width + 120, 10 );
+            colorPicker.input(setBestColorMatch);
+            
+            //Create random colors
+            for( let i = 0 ; i < colorsPerRow*colorsPerRow;  i ++ ) {
+                let c = {};
+                c.h = Math.floor( random( 0,360 ) );
+                c.s = Math.floor( random( 20,100 ) );
+                c.l = Math.floor( random( 20,80 ) )
+                c.color = color(`hsl(${c.h}, ${c.s}%, ${c.l}%)`);
+                c.marked = false;
+                
+                randomColors.push( c );
+            }
+
+            blockWidth = Math.floor( width / colorsPerRow );
+        }
+
+        function setBestColorMatch()  {
+            let c = this.value().replace("#","");
+            let r = parseInt( c.substring( 0,2 ), 16 );
+            let g = parseInt( c.substring( 2,4 ), 16 );
+            let b = parseInt( c.substring( 4,6 ), 16 );
+            
+            let hsl = RGBToHSL(r,g,b);
+            
+            let smallestDistance = Infinity;
+            let foundColor;
+
+            for( let i = 0 ; i < randomColors.length ; i++ ) {
+                randomColors[i].marked = false;
+                
+                let d = 
+                    Math.abs( randomColors[i].h - hsl[0] )
+                    +
+                    ( Math.abs( randomColors[i].s - hsl[1] ) /2 )
+                    +
+                    ( Math.abs( randomColors[i].l - hsl[2] ) /2 )
+                ;
+                
+                if( d < smallestDistance ) {
+                    smallestDistance = d;
+                    foundColor = randomColors[i];
+                }                
+            }
+            
+            if( typeof foundColor != "undefined" ) {
+                foundColor.marked = true;
+            }
+        }
+
+        function draw() {
+            background( 220 );
+            stroke( 0, 0, 0 );
+            strokeWeight( 1 );
+            
+            let markedColor = -1;
+            for( let i = 0 ; i < randomColors.length ; i++ ) {
+                if( randomColors[i].marked ) {
+                    markedColor = i;
+                }
+                else {fill( randomColors[i].color );
+                    rect( (i % colorsPerRow) * blockWidth,Math.floor(i / colorsPerRow) * blockWidth, blockWidth,blockWidth);
+                }
+            }
+            
+            if( markedColor != -1 ) {
+                strokeWeight( 3 );
+                fill( randomColors[markedColor].color );
+                rect( (markedColor % colorsPerRow) * blockWidth - 10, Math.floor(markedColor / colorsPerRow) * blockWidth - 10, blockWidth + 20, blockWidth + 20 );
+            }
+            
+        }
+    </script>
+
+  </body>
+</html>
